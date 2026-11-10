@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TuS Haren 2 – Weihnachtsfeier-Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --red:#a3162a; --red-dk:#7d1020; --snow:#fbf8f4; --pine:#1f3b2d;
+  --gold:#c9a227; --gold-lt:#f1dc8a; --ink:#231a1a; --muted:#6d6262; --line:#e6dfd8;
+  --display:"Alfa Slab One","Rockwell","Roboto Slab",Georgia,serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{min-height:100%}
+body{font-family:var(--body);background:var(--snow);color:var(--ink);font-size:18px;line-height:1.4;
+  padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);-webkit-tap-highlight-color:transparent}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.1}
+button{font:inherit;cursor:pointer;border:0;color:inherit;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:0 18px 40px}
+.hidden{display:none!important}
+
+/* Kopf */
+.top{background:var(--red);color:#fff;padding:22px 18px 20px;border-bottom:6px solid var(--gold)}
+.top .in{max-width:560px;margin:0 auto}
+.top h1{font-size:28px}
+.top p{opacity:.9;margin-top:6px;font-size:16px}
+
+/* Fortschritt */
+.prog{display:flex;gap:5px;margin:18px 0 6px}
+.prog i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.prog i.done{background:var(--red)}
+.prog i.now{background:var(--gold)}
+.count{color:var(--muted);font-size:15px}
+
+.cat h2{font-size:25px;line-height:1.2;margin:14px 0 8px}
+.cat .sub{color:var(--muted);margin-bottom:14px}
+.search{width:100%;padding:13px 14px;border:2px solid var(--line);border-radius:10px;font:inherit;background:#fff;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.p{display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border:2px solid var(--line);border-radius:12px;text-align:left;min-height:62px;transition:border-color .12s,background .12s}
+.p:active{transform:scale(.98)}
+.p[aria-pressed="true"]{border-color:var(--red);background:#fdeef0}
+.av{flex:none;width:42px;height:42px;border-radius:50%;background:var(--pine);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.p[aria-pressed="true"] .av{background:var(--red)}
+.pn{font-weight:600;line-height:1.15;word-break:break-word}
+
+.nav{position:sticky;bottom:0;display:flex;gap:10px;padding:14px 0 6px;background:linear-gradient(to top,var(--snow) 70%,transparent)}
+.btn{flex:1;padding:15px;border-radius:12px;font-weight:700;background:var(--red);color:#fff;text-align:center}
+.btn:disabled{background:#cfc6c0;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);flex:0 0 auto;padding:15px 20px}
+.btn.gold{background:var(--gold);color:var(--ink)}
+
+/* Übersicht */
+.sum{list-style:none;padding:0;margin:14px 0}
+.sum li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.sum b{font-weight:600}
+.sum span{color:var(--red-dk);font-weight:700;text-align:right}
+
+/* Danke */
+.thanks{text-align:center;padding:48px 0}
+.thanks .big{font-size:76px}
+.thanks h2{font-size:30px;margin:10px 0}
+.thanks p{color:var(--muted)}
+
+/* Ergebnis */
+.stage{background:var(--pine);color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.stage .bar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:15px;opacity:.85}
+.reveal{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10px 20px 20px}
+.reveal .cat-t{font-family:var(--display);font-size:clamp(19px,4.6vw,30px);line-height:1.25;max-width:640px;color:var(--gold-lt);margin-bottom:22px}
+.spot{position:relative;width:min(70vw,300px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle,#fff6d0 0%,var(--gold) 55%,#8c6f10 100%);box-shadow:0 0 0 8px rgba(201,162,39,.25),0 0 80px rgba(241,220,138,.5)}
+.spot .ph{width:86%;height:86%;border-radius:50%;overflow:hidden;background:var(--red);display:grid;place-items:center;font-family:var(--display);font-size:clamp(54px,14vw,96px);color:#fff;border:6px solid #fff}
+.spot .ph img{width:100%;height:100%;object-fit:cover}
+.cup{position:absolute;right:-6%;bottom:-8%;font-size:clamp(60px,16vw,96px);filter:drop-shadow(0 6px 10px rgba(0,0,0,.4));transform-origin:50% 100%}
+.winner{font-family:var(--display);font-size:clamp(34px,9vw,60px);margin-top:26px;line-height:1.05}
+.votes{margin-top:8px;color:var(--gold-lt);font-size:19px}
+.also{margin-top:6px;opacity:.85;font-size:16px}
+.pop .spot{animation:pop .7s cubic-bezier(.2,1.4,.4,1) both}
+.pop .cup{animation:cup .9s .5s cubic-bezier(.2,1.6,.4,1) both}
+.pop .winner{animation:rise .5s .35s both}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes cup{from{transform:translateY(-60px) rotate(-30deg) scale(.2);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.stage .nav{background:none;padding:0 18px 20px;max-width:560px;width:100%;margin:0 auto}
+.stage .btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.intro h1{font-size:34px;margin-bottom:10px}
+.qrbox{background:#fff;padding:14px;border-radius:14px;display:inline-block;margin:18px 0}
+.pin{width:100%;padding:14px;font:inherit;font-size:22px;text-align:center;letter-spacing:.3em;border:2px solid var(--line);border-radius:12px;margin:14px 0}
+.err{color:var(--red);font-weight:600;min-height:1.4em}
+.note{background:#fff7da;border:1px solid var(--gold);border-radius:10px;padding:10px 12px;font-size:15px;margin:14px 0}
+.runners{display:flex;gap:12px;justify-content:center;margin-top:26px;width:100%;max-width:480px}
+.run{flex:1;background:rgba(255,255,255,.1);border-radius:14px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.run .pl{font-family:var(--display);color:var(--gold-lt);font-size:15px}
+.run .av{width:52px;height:52px;background:var(--red);border:3px solid #fff}
+.run .rn{font-weight:700;line-height:1.15;word-break:break-word}
+.run .rv{font-size:14px;opacity:.85}
+.pop .runners{animation:none}
+.place-t{font-family:var(--display);color:var(--gold-lt);font-size:clamp(20px,5vw,28px);margin-bottom:14px}
+.spot.p2{background:radial-gradient(circle,#ffffff 0%,#c9d0d6 55%,#7d878f 100%);box-shadow:0 0 0 8px rgba(200,208,214,.25),0 0 70px rgba(220,226,232,.4)}
+.spot.p3{background:radial-gradient(circle,#ffe2c2 0%,#c98a4b 55%,#7a4a1c 100%);box-shadow:0 0 0 8px rgba(201,138,75,.25),0 0 70px rgba(230,170,110,.4)}
+.spot.p2 .ph,.spot.p3 .ph{background:var(--red-dk)}
+.plist{list-style:none;padding:0;margin:10px 0}
+.plist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.plist .nm{flex:1;font-weight:600;word-break:break-word}
+.mini{padding:9px 12px;border:2px solid var(--line);border-radius:10px;background:#fff;font-weight:600;font-size:15px}
+.mini.del{color:var(--red);border-color:#e9c3c8}
+textarea.search{resize:vertical;min-height:110px}
+.adm h2{font-size:22px;margin:22px 0 8px}
+.lnk{color:var(--gold-lt);font-weight:600}
+@media (prefers-reduced-motion:reduce){.pop .spot,.pop .cup,.pop .winner,.pop .runners{animation:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="config.js"></script>
+<script>
+if (typeof CONFIG === "undefined") {
+  document.getElementById("app").innerHTML = '<div style="padding:30px;font:18px system-ui;max-width:480px;margin:auto"><h2>config.js fehlt</h2><p>Lege die Datei config.js in denselben Ordner wie index.html und lade die Seite neu. Oder nutze die Datei komplett.html, die ohne config.js funktioniert.</p></div>';
+  throw new Error("config.js fehlt");
+}
+</script>
+<script>
+/* =====================================================================
+   Technik
+   ===================================================================== */
+const $app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const initials = n => n.trim().split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
+const byId = (arr, id) => arr.find(x => x.id === id);
+
+// Gerätekennung: verhindert doppeltes Abstimmen vom selben Handy
+let deviceId = localStorage.getItem("xmas-device");
+if (!deviceId) {
+  deviceId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+  localStorage.setItem("xmas-device", deviceId);
+}
+
+// Speicher: Firebase oder Demo
+let db = null;
+const demo = !CONFIG.firebase;
+if (!demo) {
+  try { firebase.initializeApp(CONFIG.firebase); db = firebase.firestore(); }
+  catch (e) { console.error(e); }
+}
+const store = {
+  async hasVoted() {
+    if (demo || !db) return localStorage.getItem("xmas-voted") === "1";
+    if (localStorage.getItem("xmas-voted") === "1") return true;
+    try { const d = await db.collection(CONFIG.collection).doc(deviceId).get(); return d.exists; }
+    catch (e) { return false; }
+  },
+  async submit(votes) {
+    if (demo || !db) {
+      const all = JSON.parse(localStorage.getItem("xmas-demo-votes") || "[]");
+      all.push({ votes, ts: Date.now() });
+      localStorage.setItem("xmas-demo-votes", JSON.stringify(all));
+    } else {
+      await db.collection(CONFIG.collection).doc(deviceId).set({ votes, ts: Date.now() });
+    }
+    localStorage.setItem("xmas-voted", "1");
+  },
+  col() { return db.collection(CONFIG.playersCollection || "xmasPlayers"); },
+  async loadPlayers() {
+    if (demo || !db) {
+      const raw = localStorage.getItem("xmas-demo-players");
+      return raw ? JSON.parse(raw) : CONFIG.players.slice();
+    }
+    const snap = await store.col().get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name, "de"));
+  },
+  async addPlayers(names) {
+    const list = names.map(n => ({ id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: n, photo: "" }));
+    if (demo || !db) {
+      const cur = await store.loadPlayers();
+      localStorage.setItem("xmas-demo-players", JSON.stringify(cur.concat(list)));
+    } else {
+      const b = db.batch();
+      list.forEach(p => b.set(store.col().doc(p.id), { name: p.name, photo: "" }));
+      await b.commit();
+    }
+  },
+  async setPhoto(id, photo) {
+    if (demo || !db) {
+      const cur = await store.loadPlayers();
+      cur.forEach(p => { if (p.id === id) p.photo = photo; });
+      localStorage.setItem("xmas-demo-players", JSON.stringify(cur));
+    } else await store.col().doc(id).update({ photo });
+  },
+  async removePlayer(id) {
+    if (demo || !db) {
+      const cur = (await store.loadPlayers()).filter(p => p.id !== id);
+      localStorage.setItem("xmas-demo-players", JSON.stringify(cur));
+    } else await store.col().doc(id).delete();
+  },
+  async all() {
+    if (demo || !db) return JSON.parse(localStorage.getItem("xmas-demo-votes") || "[]");
+    const snap = await db.collection(CONFIG.collection).get();
+    return snap.docs.map(d => d.data());
+  }
+};
+
+const avatar = p => `<span class="av">${p.photo ? `<img src="${esc(p.photo)}" alt="" onerror="this.remove()">` : ""}${p.photo ? "" : esc(initials(p.name))}</span>`;
+
+/* ---------------- Abstimmen ---------------- */
+const state = { i: 0, picks: {}, q: "" };
+
+function header(sub) {
+  return `<header class="top"><div class="in"><h1>${esc(CONFIG.title)}</h1><p>${esc(sub || CONFIG.club)}</p></div></header>`;
+}
+
+function renderVote() {
+  const cats = CONFIG.categories, n = cats.length;
+  if (!CONFIG.players.length) {
+    $app.innerHTML = header() + `<main class="wrap thanks"><div class="big">⚽</div><h2>Noch keine Spieler</h2><p>Die Spielerliste ist noch leer oder konnte nicht geladen werden.</p></main>`;
+    return;
+  }
+  if (state.i >= n) return renderSummary();
+  const c = cats[state.i];
+  const q = state.q.trim().toLowerCase();
+  const list = CONFIG.players.filter(p => p.name.toLowerCase().includes(q));
+  $app.innerHTML = `
+    ${header(CONFIG.club)}
+    <main class="wrap cat">
+      <div class="prog" aria-hidden="true">${cats.map((_, k) => `<i class="${k < state.i ? "done" : k === state.i ? "now" : ""}"></i>`).join("")}</div>
+      <div class="count">Kategorie ${state.i + 1} von ${n}</div>
+      <h2>${esc(c.title)}</h2>
+      <p class="sub">${esc(c.sub || "")}</p>
+      ${CONFIG.players.length > 10 ? `<input class="search" id="q" type="search" placeholder="Spieler suchen" value="${esc(state.q)}" autocomplete="off">` : ""}
+      <div class="grid">
+        ${list.map(p => `<button class="p" data-id="${esc(p.id)}" aria-pressed="${state.picks[c.id] === p.id}">${avatar(p)}<span class="pn">${esc(p.name)}</span></button>`).join("")}
+      </div>
+      ${list.length ? "" : `<p class="sub">Kein Spieler gefunden.</p>`}
+      <div class="nav">
+        ${state.i > 0 ? `<button class="btn ghost" id="back">Zurück</button>` : ""}
+        <button class="btn" id="next" ${state.picks[c.id] ? "" : "disabled"}>${state.i === n - 1 ? "Zur Übersicht" : "Weiter"}</button>
+      </div>
+    </main>`;
+  const qi = document.getElementById("q");
+  if (qi) qi.addEventListener("input", e => {
+    state.q = e.target.value; const pos = e.target.selectionStart; renderVote();
+    const el = document.getElementById("q"); el.focus(); el.setSelectionRange(pos, pos);
+  });
+  $app.querySelectorAll(".p").forEach(b => b.addEventListener("click", () => {
+    state.picks[c.id] = b.dataset.id;
+    $app.querySelectorAll(".p").forEach(x => x.setAttribute("aria-pressed", x === b));
+    document.getElementById("next").disabled = false;
+  }));
+  document.getElementById("next").addEventListener("click", () => { state.i++; state.q = ""; renderVote(); window.scrollTo(0, 0); });
+  const back = document.getElementById("back");
+  if (back) back.addEventListener("click", () => { state.i--; state.q = ""; renderVote(); window.scrollTo(0, 0); });
+}
+
+function renderSummary() {
+  $app.innerHTML = `
+    ${header("Deine Auswahl")}
+    <main class="wrap">
+      <ul class="sum">
+        ${CONFIG.categories.map((c, k) => `<li><b>${esc(c.title)}</b><span>${esc(byId(CONFIG.players, state.picks[c.id]).name)}</span></li>`).join("")}
+      </ul>
+      <p class="count">Nach dem Absenden kannst du nicht mehr ändern.</p>
+      <p class="err" id="err"></p>
+      <div class="nav">
+        <button class="btn ghost" id="back">Ändern</button>
+        <button class="btn" id="send">Stimme abgeben</button>
+      </div>
+    </main>`;
+  document.getElementById("back").addEventListener("click", () => { state.i = CONFIG.categories.length - 1; renderVote(); });
+  document.getElementById("send").addEventListener("click", async e => {
+    e.target.disabled = true; e.target.textContent = "Wird gesendet …";
+    try { await store.submit(state.picks); renderThanks(); }
+    catch (err) {
+      console.error(err);
+      document.getElementById("err").textContent = "Das hat nicht geklappt. Prüfe die Verbindung und versuche es noch einmal.";
+      e.target.disabled = false; e.target.textContent = "Stimme abgeben";
+    }
+  });
+}
+
+function renderThanks() {
+  $app.innerHTML = `
+    ${header()}
+    <main class="wrap thanks">
+      <div class="big">🏆</div>
+      <h2>Danke für deine Stimme!</h2>
+      <p>Die Gewinner werden auf der Feier verkündet.</p>
+    </main>`;
+}
+
+/* ---------------- Ergebnis ---------------- */
+function tally(docs) {
+  return CONFIG.categories.map(c => {
+    const counts = {};
+    docs.forEach(d => { const v = d.votes && d.votes[c.id]; if (v) counts[v] = (counts[v] || 0) + 1; });
+    const max = Math.max(0, ...Object.values(counts));
+    const winners = Object.keys(counts).filter(k => counts[k] === max && max > 0).map(id => byId(CONFIG.players, id)).filter(Boolean);
+    // Platz 2 und 3: nächstniedrigere Stimmenzahlen (bei Gleichstand teilen sich Spieler den Platz)
+    const levels = [...new Set(Object.values(counts))].sort((a, b) => b - a);
+    const runners = levels.slice(1, 3).map((n, idx) => ({
+      place: idx + 2, count: n,
+      players: Object.keys(counts).filter(k => counts[k] === n).map(id => byId(CONFIG.players, id)).filter(Boolean)
+    }));
+    return { cat: c, max, winners, runners, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+  });
+}
+
+function renderPin(next) {
+  $app.innerHTML = `
+    ${header("Ergebnis")}
+    <main class="wrap">
+      <h2 style="font-size:26px;margin:22px 0 6px">Admin-PIN</h2>
+      <input class="pin" id="pin" type="password" inputmode="numeric" autocomplete="off" aria-label="PIN">
+      <p class="err" id="err"></p>
+      <div class="nav"><button class="btn" id="ok">Öffnen</button></div>
+    </main>`;
+  const go = () => {
+    if (document.getElementById("pin").value === CONFIG.adminPin) { sessionStorage.setItem("xmas-pin", "1"); next(); }
+    else document.getElementById("err").textContent = "Falsche PIN.";
+  };
+  document.getElementById("ok").addEventListener("click", go);
+  document.getElementById("pin").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+}
+
+async function renderIntro() {
+  const url = location.href.split("#")[0];
+  $app.innerHTML = `
+    <div class="stage"><div class="bar"><span>${esc(CONFIG.club)}</span><span id="cnt">…</span></div>
+    <main class="reveal intro">
+      <h1 style="font-family:var(--display);color:var(--gold-lt)">${esc(CONFIG.title)}</h1>
+      <p>Zum Abstimmen den Code scannen</p>
+      <div class="qrbox" id="qr"></div>
+      <a class="lnk" href="#admin">Spieler verwalten</a>
+      ${demo ? `<p class="note" style="color:var(--ink)">Demo-Modus: Es ist noch keine Firebase-Konfiguration eingetragen. Stimmen werden nur auf diesem Gerät gespeichert.</p>` : ""}
+    </main>
+    <div class="nav"><button class="btn ghost" id="refresh">Aktualisieren</button><button class="btn gold" id="start">Gewinner enthüllen</button></div>
+    ${demo ? `<div class="nav" style="padding-top:0"><button class="btn ghost" id="seed">Testdaten erzeugen</button><button class="btn ghost" id="clear">Testdaten löschen</button></div>` : ""}</div>`;
+  new QRCode(document.getElementById("qr"), { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+  const upd = async () => { try { document.getElementById("cnt").textContent = (await store.all()).length + " Stimmen"; } catch (e) { document.getElementById("cnt").textContent = "Fehler beim Laden"; } };
+  upd();
+  document.getElementById("refresh").addEventListener("click", upd);
+  if (demo) {
+    document.getElementById("seed").addEventListener("click", () => {
+      const all = JSON.parse(localStorage.getItem("xmas-demo-votes") || "[]");
+      const P = CONFIG.players;
+      for (let n = 0; n < 25; n++) {
+        const votes = {};
+        CONFIG.categories.forEach(c => {
+          // leicht ungleich verteilt, damit es einen Favoriten gibt
+          const r = Math.random();
+          votes[c.id] = P[Math.floor(Math.pow(r, 1.6) * P.length)].id;
+        });
+        all.push({ votes, ts: Date.now() });
+      }
+      localStorage.setItem("xmas-demo-votes", JSON.stringify(all));
+      upd();
+    });
+    document.getElementById("clear").addEventListener("click", () => { localStorage.removeItem("xmas-demo-votes"); upd(); });
+  }
+  document.getElementById("start").addEventListener("click", async () => {
+    let docs; try { docs = await store.all(); } catch (e) { alert("Stimmen konnten nicht geladen werden."); return; }
+    reveal(tally(docs), 0, docs.length);
+  });
+}
+
+function reveal(results, k, totalVoters, step) {
+  if (step === undefined) step = -1;               // -1 = nur Kategorie-Titel, noch nichts enthüllt
+  const r = results[k];
+  // Reihenfolge der Enthüllung: Platz 3, Platz 2, zuletzt Platz 1
+  const stages = [
+    ...r.runners.slice().reverse().map(g => ({ place: g.place, players: g.players, count: g.count })),
+    ...(r.winners.length ? [{ place: 1, players: r.winners, count: r.max }] : [])
+  ];
+  const last = stages.length - 1;
+  const lastCat = k === results.length - 1;
+  const medal = { 1: "🏆", 2: "🥈", 3: "🥉" };
+  let body;
+  if (!stages.length) {
+    body = `<div class="winner">Keine Stimmen</div>`;
+  } else if (step < 0) {
+    body = `<div class="winner" style="font-size:clamp(24px,6vw,38px)">Wer steht auf dem Podest?</div>
+            <div class="votes">${stages.length} ${stages.length === 1 ? "Platz" : "Plätze"} werden enthüllt</div>`;
+  } else {
+    const st = stages[step], p = st.players[0];
+    const names = st.players.map(x => x.name).join(" & ");
+    const tie = st.players.length > 1;
+    body = `
+      <div class="place-t">${st.place}. Platz</div>
+      <div class="spot p${st.place}" key="${k}-${step}"><div class="ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" onerror="this.remove()">` : esc(initials(p.name))}</div><span class="cup" aria-hidden="true">${medal[st.place]}</span></div>
+      <div class="winner" style="${st.place > 1 ? "font-size:clamp(30px,8vw,48px)" : ""}">${esc(names)}</div>
+      <div class="votes">${st.count} ${st.count === 1 ? "Stimme" : "Stimmen"}${tie ? " · Gleichstand" : ""}</div>
+      ${tie ? `<div class="also">Das Foto zeigt ${esc(p.name)}.</div>` : ""}
+      ${step > 0 ? `<div class="runners">${stages.slice(0, step).reverse().map(g => `
+        <div class="run"><span class="pl">${g.place}. Platz</span>
+          ${g.players.length === 1 ? avatar(g.players[0]) : ""}
+          <span class="rn">${esc(g.players.map(x => x.name).join(" & "))}</span>
+          <span class="rv">${g.count} ${g.count === 1 ? "Stimme" : "Stimmen"}</span></div>`).join("")}</div>` : ""}`;
+  }
+  const done = !stages.length || step >= last;
+  const nextLabel = done ? (lastCat ? "Fertig" : "Nächste Kategorie") : `${stages[step + 1].place}. Platz enthüllen`;
+  $app.innerHTML = `
+    <div class="stage"><div class="bar"><span>Kategorie ${k + 1} von ${results.length}</span><span>${totalVoters} Stimmen gesamt</span></div>
+    <main class="reveal pop"><div class="cat-t">${esc(r.cat.title)}</div>${body}</main>
+    <div class="nav">
+      ${(step >= 0 || k > 0) ? `<button class="btn ghost" id="prev">Zurück</button>` : ""}
+      <button class="btn gold" id="nx">${nextLabel}</button>
+    </div></div>`;
+  document.getElementById("nx").addEventListener("click", () => {
+    if (!done) reveal(results, k, totalVoters, step + 1);
+    else if (lastCat) renderIntro();
+    else reveal(results, k + 1, totalVoters, -1);
+  });
+  const pv = document.getElementById("prev");
+  if (pv) pv.addEventListener("click", () => {
+    if (step >= 0) reveal(results, k, totalVoters, step - 1);
+    else {
+      const pr = results[k - 1];
+      const n = pr.runners.length + (pr.winners.length ? 1 : 0);
+      reveal(results, k - 1, totalVoters, n - 1);
+    }
+  });
+}
+
+/* ---------------- Spieler verwalten ---------------- */
+function resizeImage(file, size = 256) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2, sy = (img.height - side) * 0.2; // Gesichter sitzen eher oben
+      const c = document.createElement("canvas"); c.width = c.height = size;
+      c.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.78));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+
+async function refreshPlayers() { CONFIG.players = await store.loadPlayers(); }
+
+function renderAdmin(msg) {
+  const P = CONFIG.players;
+  $app.innerHTML = `
+    ${header("Spieler verwalten")}
+    <main class="wrap adm">
+      ${demo ? `<p class="note">Demo-Modus: Änderungen gelten nur auf diesem Gerät.</p>` : ""}
+      <h2>Namen hinzufügen</h2>
+      <textarea class="search" id="names" placeholder="Ein Name pro Zeile"></textarea>
+      <button class="btn" id="add" style="width:100%">Hinzufügen</button>
+      <p class="err" id="err">${esc(msg || "")}</p>
+      <h2>Spieler (${P.length})</h2>
+      <ul class="plist">
+        ${P.map(p => `<li>${avatar(p)}<span class="nm">${esc(p.name)}</span>
+          <button class="mini" data-photo="${esc(p.id)}">Foto</button>
+          <button class="mini del" data-del="${esc(p.id)}" aria-label="${esc(p.name)} löschen">Löschen</button></li>`).join("")}
+      </ul>
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="nav"><button class="btn ghost" id="toRes">Zur Auswertung</button></div>
+    </main>`;
+  const err = t => { document.getElementById("err").textContent = t; };
+  document.getElementById("add").addEventListener("click", async e => {
+    const names = document.getElementById("names").value.split("\n").map(x => x.trim()).filter(Boolean);
+    if (!names.length) return err("Bitte mindestens einen Namen eintragen.");
+    e.target.disabled = true;
+    try { await store.addPlayers(names); await refreshPlayers(); renderAdmin(); }
+    catch (x) { console.error(x); e.target.disabled = false; err("Speichern hat nicht geklappt. Prüfe die Firestore-Regeln und die Verbindung."); }
+  });
+  let pending = null;
+  const file = document.getElementById("file");
+  $app.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => { pending = b.dataset.photo; file.value = ""; file.click(); }));
+  file.addEventListener("change", async () => {
+    if (!file.files[0] || !pending) return;
+    try { await store.setPhoto(pending, await resizeImage(file.files[0])); await refreshPlayers(); renderAdmin(); }
+    catch (x) { console.error(x); err("Das Foto konnte nicht gespeichert werden."); }
+  });
+  $app.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+    const p = byId(CONFIG.players, b.dataset.del);
+    if (!confirm((p ? p.name : "Spieler") + " wirklich löschen?")) return;
+    try { await store.removePlayer(b.dataset.del); await refreshPlayers(); renderAdmin(); }
+    catch (x) { console.error(x); err("Löschen hat nicht geklappt."); }
+  }));
+  document.getElementById("toRes").addEventListener("click", () => { location.hash = "#ergebnis"; });
+}
+
+function gate(next) { sessionStorage.getItem("xmas-pin") === "1" ? next() : renderPin(next); }
+
+/* ---------------- Start ---------------- */
+async function boot() {
+  try { await refreshPlayers(); } catch (e) { console.error(e); CONFIG.players = []; }
+  if (location.hash === "#ergebnis") return gate(renderIntro);
+  if (location.hash === "#admin") return gate(renderAdmin);
+  if (await store.hasVoted()) return renderThanks();
+  renderVote();
+}
+window.addEventListener("hashchange", () => location.reload());
+boot();
+</script>
+</body>
+</html>
